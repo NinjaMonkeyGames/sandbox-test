@@ -1,0 +1,39 @@
+# Maintains markdown standards throghout the documentation
+
+name: Markdown Lint Utility Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  markdown_lint_check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js
+        # Required to run the markdownlint-cli2 package
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24' 
+          
+      - name: Install markdownlint-cli2
+        # Install the tool locally so the next step can find it
+        run: npm install markdownlint-cli2
+        
+      - name: 🔍 Check Markdown Lint Version
+        # This new step confirms the installed version for debugging/confirmation
+        run: npx markdownlint-cli2 --version
+        
+      - name: 📄 Run Markdown Lint Check with Custom Config (Direct CLI Execution)
+        # Use npx to execute the locally installed package, passing your config file
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+        
+      - name: Report Successful Markdown Lint Execution
+        run: |
+          echo "###################################################"
+          echo "## MARKDOWN LINT WORKFLOW EXECUTED SUCCESSFULLY! ##"
+          echo "###################################################"
+          echo "Checked files using configuration: .markdownlint-cli2.jsonc via direct CLI execution."

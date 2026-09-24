@@ -1,0 +1,31 @@
+# Fast compile-only validation. This is intentionally separate from gm-cli.yaml
+# (which runs the full unit test suite) — compile checks are cheap and give
+# quick feedback that the project builds before we bother running tests or
+# allowing a merge into develop.
+
+name: GM-CLI Compile Check
+
+on:
+  workflow_call:
+    # Receives the call from pr-gate.yaml (or anywhere else that needs it)
+
+jobs:
+  compile-check:
+    name: Compile Project (Pre-Merge Gate)
+    runs-on: ubuntu-latest
+
+    # --privileged allows unshare, chroot, and mount operations
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Compile Project
+        working-directory: ./grid-utility-professional
+        run: npx @gamemaker/gm-cli@latest compile --verbose

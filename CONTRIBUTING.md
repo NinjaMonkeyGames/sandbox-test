@@ -359,9 +359,9 @@ keeps quoting consistent between prose and code.
 
 Author: Daniel Mallett (Monkey Knuckles)
 
-If you have any problems with the repository or have any suggestions please contact us at <info@ninjamonkeygames.com>.
+If you have any problems with the repository or have any suggestions please contact us at <info@NinjaMonkeyGames.com>.
 
-You may also contact us via our [website](https://ninjamonkeygames.com).
+You may also contact us via our [website](https://NinjaMonkeyGames.com).
 
 Any bugs should be raised as an [issue](https://github.com/NinjaMonkeyGames/grid-utility-professional/issues) on
 GitHub.

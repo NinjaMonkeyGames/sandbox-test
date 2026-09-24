@@ -1,0 +1,44 @@
+# Runs on pushes to hotfix/** branches. Hotfix branches take direct pushes
+# (excluded from the "require PR" rule) so this push-triggered check is the
+# only automated checkpoint before the hotfix gets PR'd into master/develop —
+# full test suite since it's headed toward production.
+
+name: Hotfix Branch Validation
+
+on:
+  workflow_call:
+    # Receives the call from CI Controller
+
+jobs:
+  # 1. Linting Jobs (Running in parallel)
+  commit-lint:
+    uses: ./.github/workflows/commitlint.yaml
+    secrets: inherit
+
+  markdown-lint:
+    uses: ./.github/workflows/markdownlint.yaml
+    secrets: inherit
+
+  # 2. Full test suite — no PR gate exists for direct pushes to this branch,
+  #    so this is the only automated checkpoint before it heads to master.
+  gm-cli-tests:
+    uses: ./.github/workflows/gm-cli.yaml
+    secrets: inherit
+
+  # 3. Deployment Job (Wait for linting + tests to pass)
+  deploy-hotfix:
+    name: Execute Hotfix Build
+    needs: [commit-lint, markdown-lint, gm-cli-tests]
+    runs-on: ubuntu-latest
+    environment: hotfix
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Deployment Simulation
+        run: |
+          echo "-------------------------------------------------------"
+          echo "🚀 STARTING HOTFIX STAGING DEPLOYMENT"
+          echo "-------------------------------------------------------"
+          echo "✅ Hotfix deployment marked as COMPLETE."
+          echo "-------------------------------------------------------"

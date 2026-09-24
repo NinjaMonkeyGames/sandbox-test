@@ -1,0 +1,33 @@
+name: Development Deployment
+
+on:
+  workflow_call:
+    # Receives the call from CI Controller
+
+jobs:
+  # 1. Linting Jobs (Running in parallel)
+  commit-lint:
+    uses: ./.github/workflows/commitlint.yaml
+    secrets: inherit
+
+  markdown-lint:
+    uses: ./.github/workflows/markdownlint.yaml
+    secrets: inherit
+
+  # 2. Deployment Job (Wait for linting to pass)
+  deploy-development:
+    name: Execute Development Build
+    needs: [commit-lint, markdown-lint]
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Deployment Simulation
+        run: |
+          echo "-------------------------------------------------------"
+          echo "🚀 STARTING DEVELOPMENT DEPLOYMENT"
+          echo "-------------------------------------------------------"
+          echo "✅ Development deployment marked as COMPLETE."
+          echo "-------------------------------------------------------"

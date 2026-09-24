@@ -1,0 +1,72 @@
+# Bump version by running semantic release
+
+name: Semantic Release Utility Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "The targeted environment for deployment/release tracking"
+    secrets:
+      APP_ID:
+        required: true
+      APP_PRIVATE_KEY:
+        required: true
+      SSH_SIGNING_KEY:
+        required: true
+
+jobs:
+  run-release:
+    name: Generate Production Release
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout Code (Full History Required for Release)
+        uses: actions/checkout@v6
+        with:
+          # Fetch-depth: 0 is vital for semantic-release to calculate changes between tags
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Semantic Release & Plugins
+              # Installing locally ensures node_modules resolves properly for release.config.js
+        run: |
+          npm install --no-save \
+            semantic-release \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator \
+            conventional-changelog-conventionalcommits \
+            @semantic-release/changelog \
+            @semantic-release/npm \
+            @semantic-release/git \
+            @semantic-release/github
+
+      - name: Configure SSH Signing Key
+        # Crucial because your @semantic-release/git configuration pushes package.json and CHANGELOG.md modifications back to GitHub
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_SIGNING_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: 🚀 Run Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        # Point directly to your custom configuration file path using --extends
+        run: npx semantic-release --extends ./.config/release.config.js

@@ -1,0 +1,50 @@
+# Run production workflow[cite: 1]
+
+name: Production Deployment
+
+on:
+  workflow_call:
+    # Receives the call from CI Controller
+
+jobs:
+  # 1. Linting Jobs (Running in parallel)[cite: 1]
+  commit-lint:
+    uses: ./.github/workflows/commitlint.yaml
+    secrets: inherit
+
+  markdown-lint:
+    uses: ./.github/workflows/markdownlint.yaml
+    secrets: inherit
+
+  publish-development-release:
+    needs: [commit-lint, markdown-lint]
+    uses: ./.github/workflows/semantic-release.yaml
+    with:
+      environment: production
+    secrets:
+      APP_ID: ${{ secrets.APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+      SSH_SIGNING_KEY: ${{ secrets.SSH_SIGNING_KEY }}
+
+  sync-back-to-develop:
+    needs: [publish-development-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Git user configuration
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge production/main back to develop
+        run: |
+          git checkout develop
+          git pull origin develop
+          git merge origin/main --no-ff -m "chore: sync production changes back to develop"
+          git push origin develop

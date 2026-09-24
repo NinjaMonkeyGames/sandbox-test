@@ -1,0 +1,449 @@
+name: CI/CD Pipeline
+
+# NOTE ON CONSOLIDATION:
+# This collapses ci.yaml + commitlint.yaml + markdownlint.yaml + gm-cli.yaml +
+# gm-cli-compile.yaml + development/preview/release/hotfix/production.yaml +
+# pr-gate.yaml + semantic-release.yaml into one file, following the
+# merge_group-aware pattern from your other project's ci.yaml.
+#
+# Two behavior changes worth flagging (easy to revert if unwanted):
+#   1. Added `merge_group` support for develop/release/**/master, so if you
+#      turn on GitHub's merge queue for those branches, the same lint/compile
+#      checks run there as on the PR itself.
+#   2. `npm install` -> `npm ci` in the lint/test steps, matching the style
+#      of your other pipeline (ci reproducibility). Change back if you don't
+#      have a committed lockfile everywhere.
+#
+# Kept as-is from your originals (not "fixed"):
+#   - production's sync-back job merges `origin/main` even though the
+#     pipeline is keyed off `master` elsewhere. That mismatch existed in
+#     your source file; I didn't silently change it.
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - develop
+      - master
+      - 'release/**'
+    types: [opened, synchronize, reopened, edited]
+  merge_group:
+    branches:
+      - develop
+      - master
+      - 'release/**'
+    types: [checks_requested]
+
+jobs:
+  # ===========================================================================
+  # PUSH: feature/** -> Preview
+  # (full gm-cli test suite, matching original preview.yaml)
+  # ===========================================================================
+  preview-checks:
+    name: Preview - Lint & Full Test Suite
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Commitlint (last commit)
+        run: npx commitlint --config .config/commitlint.config.js --last
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  preview-gm-cli-tests:
+    name: Preview - GM-CLI Unit Tests
+    needs: preview-checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install
+      - name: Run tests under Xvfb
+        working-directory: ./grid-utility-professional
+        env:
+          DISPLAY: :99
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          sleep 2
+          npx @gamemaker/gm-cli@latest run --verbose 2>&1 | tee test_output.log || true
+      - name: Evaluate results
+        run: |
+          chmod +x ./gm-fail.sh
+          ./gm-fail.sh ./grid-utility-professional/test_output.log
+
+  deploy-preview:
+    name: Execute Preview Build
+    needs: [preview-checks, preview-gm-cli-tests]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🚀 STARTING PREVIEW DEPLOYMENT"
+          echo "✅ Preview deployment marked as COMPLETE."
+
+  # ===========================================================================
+  # PUSH: develop -> Development
+  # (lint only, no test suite, matching original development.yaml)
+  # ===========================================================================
+  development-checks:
+    name: Development - Lint Checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Commitlint (last commit)
+        run: npx commitlint --config .config/commitlint.config.js --last
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  deploy-development:
+    name: Execute Development Build
+    needs: development-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🚀 STARTING DEVELOPMENT DEPLOYMENT"
+          echo "✅ Development deployment marked as COMPLETE."
+
+  # ===========================================================================
+  # PUSH: release/** -> Release staging
+  # (full test suite, heading toward production, matching original release.yaml)
+  # ===========================================================================
+  release-checks:
+    name: Release - Lint Checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Commitlint (last commit)
+        run: npx commitlint --config .config/commitlint.config.js --last
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  release-gm-cli-tests:
+    name: Release - GM-CLI Unit Tests
+    needs: release-checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install
+      - name: Run tests under Xvfb
+        working-directory: ./grid-utility-professional
+        env:
+          DISPLAY: :99
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          sleep 2
+          npx @gamemaker/gm-cli@latest run --verbose 2>&1 | tee test_output.log || true
+      - name: Evaluate results
+        run: |
+          chmod +x ./gm-fail.sh
+          ./gm-fail.sh ./grid-utility-professional/test_output.log
+
+  deploy-release:
+    name: Execute Release Staging Build
+    needs: [release-checks, release-gm-cli-tests]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🚀 STARTING RELEASE STAGING DEPLOYMENT"
+          echo "✅ Release deployment marked as COMPLETE."
+
+  # ===========================================================================
+  # PUSH: hotfix/** -> Hotfix
+  # (direct pushes bypass PR gate, so full test suite is the only automated
+  # checkpoint before this heads toward master, matching original hotfix.yaml)
+  # ===========================================================================
+  hotfix-checks:
+    name: Hotfix - Lint Checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/hotfix/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Commitlint (last commit)
+        run: npx commitlint --config .config/commitlint.config.js --last
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  hotfix-gm-cli-tests:
+    name: Hotfix - GM-CLI Unit Tests
+    needs: hotfix-checks
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/hotfix/')
+    runs-on: ubuntu-latest
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install
+      - name: Run tests under Xvfb
+        working-directory: ./grid-utility-professional
+        env:
+          DISPLAY: :99
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          sleep 2
+          npx @gamemaker/gm-cli@latest run --verbose 2>&1 | tee test_output.log || true
+      - name: Evaluate results
+        run: |
+          chmod +x ./gm-fail.sh
+          ./gm-fail.sh ./grid-utility-professional/test_output.log
+
+  deploy-hotfix:
+    name: Execute Hotfix Build
+    needs: [hotfix-checks, hotfix-gm-cli-tests]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/hotfix/')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🚀 STARTING HOTFIX STAGING DEPLOYMENT"
+          echo "✅ Hotfix deployment marked as COMPLETE."
+
+  # ===========================================================================
+  # PUSH: master -> Production
+  # (lint + semantic-release publish + sync back to develop,
+  # matching original production.yaml + semantic-release.yaml)
+  # ===========================================================================
+  production-checks:
+    name: Production - Lint Checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Commitlint (last commit)
+        run: npx commitlint --config .config/commitlint.config.js --last
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  production-release:
+    name: Production - Semantic Release Publish
+    needs: production-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Semantic Release & Plugins
+        run: |
+          npm install --no-save \
+            semantic-release \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator \
+            conventional-changelog-conventionalcommits \
+            @semantic-release/changelog \
+            @semantic-release/npm \
+            @semantic-release/git \
+            @semantic-release/github
+
+      - name: Configure SSH Signing Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_SIGNING_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: 🚀 Run Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: npx semantic-release --extends ./.config/release.config.js
+
+  sync-back-to-develop:
+    name: Sync Production Changes Back to Develop
+    needs: production-release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Merge production/main back to develop
+        # Kept exactly as in your original production.yaml — note this merges
+        # origin/main while the rest of the pipeline is keyed off `master`.
+        run: |
+          git checkout develop
+          git pull origin develop
+          git merge origin/main --no-ff -m "chore: sync production changes back to develop"
+          git push origin develop
+
+  # ===========================================================================
+  # PULL_REQUEST + MERGE_GROUP: develop / release/** / master
+  # (merge gate — commit lint via PR title+body or last commit for merge
+  # queue, markdown lint, and compile-vs-full-test split by base branch,
+  # matching original pr-gate.yaml)
+  # ===========================================================================
+  pr-checks:
+    name: Merge Gate - Lint Checks
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    outputs:
+      # merge_group events don't expose github.base_ref (that's PR-only), so
+      # normalize both event shapes to a plain branch name here once, and
+      # have every downstream job/step read this output instead of
+      # re-deriving it. Without this, merge-queue runs targeting master
+      # silently fell through to the compile-only path (see PR discussion).
+      target_branch: ${{ steps.target.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Determine target branch
+        id: target
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "branch=${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            # merge_group.base_ref looks like "refs/heads/master" — strip the prefix
+            raw="${{ github.event.merge_group.base_ref }}"
+            echo "branch=${raw#refs/heads/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commitlint (PR title & body)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf "%s\n\n%s" "$PR_TITLE" "$PR_BODY" > /tmp/PR_COMMIT_MSG
+          npx commitlint --config .config/commitlint.config.js --edit /tmp/PR_COMMIT_MSG
+
+      - name: Commitlint (merge queue commit)
+        if: github.event_name == 'merge_group'
+        run: npx commitlint --config .config/commitlint.config.js --last
+
+      - name: Markdownlint
+        run: npx markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc .
+
+  pr-gm-cli-compile:
+    name: Merge Gate - Compile Check (develop / release)
+    needs: pr-checks
+    if: |
+      (github.event_name == 'pull_request' || github.event_name == 'merge_group') &&
+      needs.pr-checks.outputs.target_branch != 'master'
+    runs-on: ubuntu-latest
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install
+      - name: Compile Project
+        working-directory: ./grid-utility-professional
+        run: npx @gamemaker/gm-cli@latest compile --verbose
+
+  pr-gm-cli-full-test:
+    name: Merge Gate - Full Test Suite (master)
+    needs: pr-checks
+    if: |
+      (github.event_name == 'pull_request' || github.event_name == 'merge_group') &&
+      needs.pr-checks.outputs.target_branch == 'master'
+    runs-on: ubuntu-latest
+    container:
+      image: monkeyknuckles/gm-cli:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install
+      - name: Run tests under Xvfb
+        working-directory: ./grid-utility-professional
+        env:
+          DISPLAY: :99
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          sleep 2
+          npx @gamemaker/gm-cli@latest run --verbose 2>&1 | tee test_output.log || true
+      - name: Evaluate results
+        run: |
+          chmod +x ./gm-fail.sh
+          ./gm-fail.sh ./grid-utility-professional/test_output.log

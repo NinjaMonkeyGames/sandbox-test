@@ -1,0 +1,36 @@
+# Pre-merge gate. Runs on every PR targeting develop, release/**, or master
+# and blocks the merge (once set as a required status check in branch
+# protection) until commit messages, markdown, and the GameMaker project
+# check out. master gets the full test suite since it's the highest-stakes
+# merge; develop and release get a fast compile-only check since the full
+# suite already ran on the source branch's push (feature/hotfix).
+
+name: Merge Gate
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+      - 'release/**'
+
+jobs:
+  commit-lint:
+    uses: ./.github/workflows/commitlint.yaml
+    secrets: inherit
+
+  markdown-lint:
+    uses: ./.github/workflows/markdownlint.yaml
+    secrets: inherit
+
+  # Fast compile-only check for PRs into develop or release/**
+  gm-cli-compile:
+    if: github.base_ref != 'master'
+    uses: ./.github/workflows/gm-cli-compile.yaml
+    secrets: inherit
+
+  # Full test suite for PRs into master -- highest-stakes merge, worth the extra time
+  gm-cli-full-test:
+    if: github.base_ref == 'master'
+    uses: ./.github/workflows/gm-cli.yaml
+    secrets: inherit

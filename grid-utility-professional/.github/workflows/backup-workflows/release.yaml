@@ -1,0 +1,44 @@
+# Runs on pushes to release/** branches — this covers both the initial push
+# when a release branch is cut off develop, and any stabilization fixes
+# merged in afterward (bug fixes during release hardening still go through
+# a PR per branch protection, this workflow validates each merge).
+
+name: Release Branch Validation
+
+on:
+  workflow_call:
+    # Receives the call from CI Controller
+
+jobs:
+  # 1. Linting Jobs (Running in parallel)
+  commit-lint:
+    uses: ./.github/workflows/commitlint.yaml
+    secrets: inherit
+
+  markdown-lint:
+    uses: ./.github/workflows/markdownlint.yaml
+    secrets: inherit
+
+  # 2. Full test suite — release branches are heading toward production,
+  #    so a compile-only check isn't enough here.
+  gm-cli-tests:
+    uses: ./.github/workflows/gm-cli.yaml
+    secrets: inherit
+
+  # 3. Deployment Job (Wait for linting + tests to pass)
+  deploy-release:
+    name: Execute Release Build
+    needs: [commit-lint, markdown-lint, gm-cli-tests]
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Deployment Simulation
+        run: |
+          echo "-------------------------------------------------------"
+          echo "🚀 STARTING RELEASE STAGING DEPLOYMENT"
+          echo "-------------------------------------------------------"
+          echo "✅ Release deployment marked as COMPLETE."
+          echo "-------------------------------------------------------"

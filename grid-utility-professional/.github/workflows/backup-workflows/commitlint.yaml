@@ -1,0 +1,44 @@
+# Ensures commit messages are conventional commit compliant
+
+name: Commit Lint Utility Workflow
+
+on:
+  workflow_call: # This makes it callable by the environment workflows
+
+jobs:
+  commit_lint_check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code (Full History Required for Commitlint)
+        # Fetch-depth: 0 ensures commitlint can check all necessary commits (e.g., in a PR).
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+        
+      - name: Setup Node.js
+        # Required to run the commitlint package
+        uses: actions/setup-node@v6
+        with: 
+          node-version: '24' 
+          
+      - name: Install Commitlint CLI and Config
+        # We install the CLI and the config-conventional package (often required even with a custom config)
+        run: npm install @commitlint/cli @commitlint/config-conventional
+        
+      - name: 🔍 Check Commitlint Version
+        # This new step confirms the installed version for debugging/confirmation
+        run: npx commitlint --version
+        
+      - name: 📝 Run Commit Lint Check with Custom Config
+        # This command runs commitlint against the last commit using your commitlint.config.js.
+        # It uses 'HEAD^1' to 'HEAD' to check the commit that triggered the workflow (or just 'HEAD' for the last commit).
+        # We assume linting the last commit message is sufficient for a push.
+        run: git log -1 --pretty=%B | npx commitlint --config .config/commitlint.config.js 
+        
+      - name: Report Successful Commit Lint Execution
+        run: |
+          echo "#################################################"
+          echo "## COMMIT LINT WORKFLOW EXECUTED SUCCESSFULLY! ##"
+          echo "#################################################"
+          echo "Checked commit messages using configuration: commitlint.config.js"
