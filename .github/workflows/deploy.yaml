@@ -1,30 +1,47 @@
-name: 🚀 Deploy to Production
+name: Deploy
 
 on:
   push:
     branches:
-      - master  # Triggers automatically after a successful merge into master
+      - master
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
+      - 'feature/**'
+  create:
 
 jobs:
-  deploy:
-    name: 🎉 Sync via FTP
+  detect-env:
+    if: github.event_name != 'create' || github.ref_type != 'tag'
+    uses: ./.github/workflows/detect-environment.yaml
+
+  log-triggering-commit-author:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Checkout repository
-        uses: actions/checkout@v4
+      - run: echo "github.event.head_commit.author.username = '${{ github.event.head_commit.author.username }}'"
 
-      - name: 📂 Sync project-files to server root
+  preview:
+    needs: detect-env
+    if: needs.detect-env.outputs.environment == 'preview' || needs.detect-env.outputs.environment == 'staging' || needs.detect-env.outputs.environment == 'production'
+    uses: ./.github/workflows/preview.yaml
+
+  deploy:
+    needs: detect-env
+    if: needs.detect-env.outputs.environment != 'none' && needs.detect-env.outputs.environment != 'preview' && (github.event_name != 'push' || github.event.head_commit.author.username != 'nmg-bot[bot]')
+    runs-on: ubuntu-latest
+    environment: ${{ needs.detect-env.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy to ${{ needs.detect-env.outputs.environment }}
+        run: |
+          echo "TODO: replace with real deploy steps for '${{ needs.detect-env.outputs.environment }}'"
+
+      - name: FTP Deploy to Production
+        if: needs.detect-env.outputs.environment == 'production'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_PASS }}
-          
-          # Source directory relative to your repo root
-          local-dir: project-files/
-          
-          # Exclude git metadata and unnecessary local files from uploading
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
