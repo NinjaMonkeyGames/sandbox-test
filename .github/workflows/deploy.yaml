@@ -1,0 +1,30 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches:
+      - master  # Triggers automatically after a successful merge into master
+
+jobs:
+  deploy:
+    name: 🎉 Sync via FTP
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📂 Sync project-files to server root
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          
+          # Source directory relative to your repo root
+          local-dir: project-files/
+          
+          # Exclude git metadata and unnecessary local files from uploading
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
