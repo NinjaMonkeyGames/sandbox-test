@@ -128,7 +128,7 @@ jobs:
         run: npm ci
 
       - name: Run Stylelint
-        run: npx stylelint "**/*.css" "**/*.scss"
+        run: npx stylelint "**/*.css" "**/*.scss" --allow-empty-input
 
   htmlhint:
     runs-on: ubuntu-latest
