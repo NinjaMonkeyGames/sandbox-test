@@ -29,10 +29,6 @@
             "integration_id": 15368
           },
           {
-            "context": "preview / gm-cli-tests",
-            "integration_id": 15368
-          },
-          {
             "context": "preview / markdownlint",
             "integration_id": 15368
           },
