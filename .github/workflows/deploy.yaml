@@ -39,22 +39,22 @@ jobs:
 
       - name: SFTP Deploy to Production
         if: needs.detect-env.outputs.environment == 'production'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp
           port: 22
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          source: "."
+          target: ${{ secrets.FTP_SERVER_DIR }}
 
       - name: SFTP Deploy to Staging
         if: needs.detect-env.outputs.environment == 'staging'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp
           port: 22
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}/staging
+          source: "."
+          target: '${{ secrets.FTP_SERVER_DIR }}/staging'
