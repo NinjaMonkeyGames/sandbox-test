@@ -37,11 +37,24 @@ jobs:
         run: |
           echo "TODO: replace with real deploy steps for '${{ needs.detect-env.outputs.environment }}'"
 
-      - name: FTP Deploy to Production
+      - name: SFTP Deploy to Production
         if: needs.detect-env.outputs.environment == 'production'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: sftp
+          port: 22
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
+
+      - name: SFTP Deploy to Staging
+        if: needs.detect-env.outputs.environment == 'staging'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: sftp
+          port: 22
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}/staging
