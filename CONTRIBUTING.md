@@ -26,8 +26,24 @@ development process. Questions? Contact the repository owner using the details i
     - [Version control \& the `.yyp` file](#version-control--the-yyp-file)
     - [Code comment style](#code-comment-style)
     - [Spelling exceptions (cspell)](#spelling-exceptions-cspell)
+  - [GameMaker Development](#gamemaker-development)
+    - [Coding Standards \& Best Practices](#coding-standards--best-practices)
+      - [1. Naming Conventions](#1-naming-conventions)
+      - [2. Global Declarations](#2-global-declarations)
+      - [3. Data Structures \& Syntax](#3-data-structures--syntax)
+      - [4. Expressions \& Assignment](#4-expressions--assignment)
+      - [5. Documentation \& Function Annotations](#5-documentation--function-annotations)
+      - [6. Resource Management](#6-resource-management)
+      - [7. Testing](#7-testing)
+      - [8. Feather (static analysis)](#8-feather-static-analysis)
+      - [9. Instance \& Scope Safety](#9-instance--scope-safety)
     - [Principles](#principles)
       - [1. The principle of Model-View-Controller (MVC) separation](#1-the-principle-of-model-view-controller-mvc-separation)
+      - [2. The principle of defensive programming](#2-the-principle-of-defensive-programming)
+      - [3. The principle of modularity](#3-the-principle-of-modularity)
+      - [4. The principle of DRY code](#4-the-principle-of-dry-code)
+      - [5. The principle of human-readable code](#5-the-principle-of-human-readable-code)
+    - [Code sanity checks](#code-sanity-checks)
   - [CONTACT INFORMATION](#contact-information)
   - [COPYRIGHT](#copyright)
 <!-- markdownlint-enable MD013 -->
@@ -283,6 +299,8 @@ Pushing to any branch, and opening a pull request into `develop` or `master`, tr
 | `preview / cspell`         | Every push*                      | Spelling across the repo, plus dotfiles (`--dot`)    |
 | `preview / shellcheck`     | Every push*                      | Every `*.sh` file via `find`, `.config/` included    |
 | `preview / eslint`         | Every push*                      | JS/TS and JSON/JSONC, `.config/eslint.config.js`     |
+| `preview / gm-cli-tests`   | Every push*                      | Project's GameMaker test suite passes                |
+| `preview / gm-cli-compile` | Every push*                      | Project compiles cleanly (linux target only)         |
 | `lint-pr-message`          | feature/* → develop PRs          | Title/body, plus every commit's Signed-off-by        |
 | `check-source-branch`      | PRs into 4 branches†             | Source branch is on the allow-list                   |
 | `release`                  | Push to master/develop/release/* | Runs semantic-release when warranted                 |
@@ -338,9 +356,187 @@ repo, not just where it's actually used.
 
 ---
 
+## GameMaker Development
+
+Everything about writing GML for this project itself — naming, style, structure, and the principles behind
+them.
+
+### Coding Standards & Best Practices
+
+#### 1. Naming Conventions
+
+- **Constants:** Must be declared in `UPPER_CASE`.
+- **Local Variables:** Must be `lower_case` and prefixed with an underscore (e.g., `_player_health`).
+- **Assets:** Must be in `snake_case` and prefixed with a prefix type code (e.g., `spr_player_idle`,
+  `obj_enemy_boss`).
+
+| Asset Type      | Prefix  | Example                |
+|-----------------|---------|------------------------|
+| Sprite          | `spr_`  | `spr_player_idle`      |
+| Object          | `obj_`  | `obj_player`           |
+| Room            | `rm_`   | `rm_level_one`         |
+| Script          | `spt_`  | `spt_calculate_damage` |
+| Sound/Audio     | `snd_`  | `snd_jump`             |
+| Tile Set        | `ts_`   | `ts_forest_tiles`      |
+| Font            | `fnt_`  | `fnt_main_menu`        |
+| Shader          | `shd_`  | `shd_greyscale`        |
+| Animation Curve | `acv_`  | `acv_jump_height`      |
+| Sequence        | `seq_`  | `seq_player_death`     |
+| Particle System | `ps_`   | `ps_fire_smoke`        |
+| Time Source     | `tsrc_` | `tsrc_cooldown_timer`  |
+| Path            | `pth_`  | `pth_enemy_patrol`     |
+
+#### 2. Global Declarations
+
+- Declare every global (`global.foo`) in one centralized, well-known place — e.g. a single controller object's Create
+  event, or one dedicated init script — rather than scattering first-use declarations across the codebase. GML has no
+  file-level scope to declare them at; `global.` variables can technically be created from anywhere, which is exactly
+  why centralizing them is a convention worth enforcing.
+- Functions may reference global variables but are prohibited from introducing new global symbols.
+- Mark persistence deliberately: use a single persistent controller/manager instance (created once, e.g. in the
+  project's first room) to survive room changes, rather than marking many individual gameplay objects `persistent`.
+  Scattering the persistence flag around makes it hard to reason about what actually survives a room change.
+
+#### 3. Data Structures & Syntax
+
+- **MVC (Model-View-Controller):** This project follows the MVC architecture — see
+  [The principle of Model-View-Controller (MVC) separation][mvc-principle] for what that means concretely in
+  GameMaker terms.
+- **Array Indexing:** Use bracket-nesting syntax exclusively: `array[x][y]`. Tuple-style indexing (e.g.,
+  `array[x, y]`) is forbidden.
+- **Ternary Operator:** Use `condition ? true_val : false_val` for concise conditional assignments.
+- **Code Style:**
+  - **Allman Style:** Braces must be on the next line for block structures.
+  - **One-Liners:** APL (Allowed Per-Line) style is permitted only for trivial, short statements.
+  - **Double equals:** Use `==` when comparing values.
+- **Draw Events:** The Draw event must be reserved exclusively for rendering/drawing commands. It is strictly
+  prohibited to place game logic, state calculations, or data processing within any Draw event.
+
+  ℹ️ **One exception to this rule is for toggling draw on or off.**
+
+[mvc-principle]: #1-the-principle-of-model-view-controller-mvc-separation
+
+#### 4. Expressions & Assignment
+
+- **No Magic Numbers:** Do not use literal numeric constants in game logic. Replace them with named constants using
+  `#macro` or `enum` — GML's own two constant mechanisms, since it has no `const` keyword (e.g.,
+  `#macro SPEED_MAX 120`).
+- **Side-Effect Prohibition:** Don't bury an assignment or a function call that has side effects inside a larger
+  expression, where it's easy to overlook.
+  - _Bad:_ `if (list_add(my_list, item) > 0) { ... }` — the list mutation is hidden inside a condition.
+  - _Bad:_ `total = get_score() + get_score();` — when `get_score()` has side effects, it's not obvious it's being
+    called twice.
+  - _Good:_ pull the call or assignment out onto its own line first, then use the result.
+- **Object Instantiation:** All `new` calls must be assigned to a variable immediately. Anonymous instantiation is
+  prohibited.
+  - _Bad:_ `new Player();`
+  - _Good:_ `var _player = new Player();`
+- **Respect datatype structure:** Do not use `1` in place of `true`, nor `0` in place of `false`.
+
+#### 5. Documentation & Function Annotations
+
+- **JSDoc:** All functions must use the GameMaker JSDoc system for documentation (`@description`, `@param`, `@returns`,
+  and friends) — see GameMaker's own [JSDoc manual page][jsdoc-manual].
+- **Annotations:** Explicitly mark functions with `@pure` where applicable — a real Feather-recognized tag that marks
+  a function as side-effect-free, which improves autocomplete/optimisation hints and documents intent for reviewers.
+  Don't invent tags GameMaker doesn't recognize (e.g. there's no `@since` or `@version`); if you need changelog or
+  version history for a function, put it in a regular comment or the commit history instead.
+- **Comment Philosophy:** Comments should explain the intent ("why" this is done) rather than the mechanics ("what"
+  the code does), as the code itself should be self-documenting through clear variable naming.
+
+[jsdoc-manual]: https://manual.gamemaker.io/monthly/en/The_Asset_Editors/Code_Editor_Properties/JSDoc_Script_Comments.htm
+
+#### 6. Resource Management
+
+- Resources allocated manually (e.g. `ds_list_create`, `buffer_create`, `surface_create`) must be cleaned up in the
+  corresponding Clean Up event. GameMaker's garbage collector only reclaims structs and arrays automatically once
+  they're unreferenced — `ds_*` data structures, buffers, and surfaces each have their own destroy function and leak
+  memory for the rest of the game's run if you don't call it yourself.
+- Always check `if (ds_exists(_data, ds_type_list))` before calling `ds_list_destroy`.
+- Prefer structs over `ds_map` for plain key-value data. GameMaker's own manual recommends this: "It is recommended
+  to use structs over DS maps as they have similar features, are easier to use and are garbage collected
+  automatically." Reach for `ds_map` only when you specifically need one of its own functions (e.g. saving/loading
+  through `ds_map_secure_save`, or a built-in API that hands you one).
+
+#### 7. Testing
+
+- New or changed gameplay logic should get coverage in the project's GameMaker test suite where gm-cli's testing
+  framework supports it — checked by `preview / gm-cli-tests` (see
+  [Continuous integration checks](#continuous-integration-checks)). When something genuinely can't be tested that
+  way, say so in the pull request description and how you verified it manually instead.
+
+#### 8. Feather (static analysis)
+
+- GameMaker's built-in static analysis system, Feather, flags likely mistakes — unreachable code, unused variables,
+  type mismatches, and more — directly in the IDE as you write. Resolve Feather warnings before opening a pull
+  request; don't leave them for a reviewer to catch by hand.
+- If a warning is a genuine false positive, silence it with a `// Feather ignore once` directive naming the specific
+  warning code (e.g. `// Feather ignore once GM1010`) — the narrowest scope Feather offers — rather than disabling
+  it for the whole script or project, and leave a comment saying why it's safe to ignore.
+
+#### 9. Instance & Scope Safety
+
+- **Stored instance ids go stale:** If you cache another instance's id in a variable (a target, a parent reference,
+  anything held across frames), that instance can be destroyed later and the stored id becomes invalid. Guard any
+  later use of it with `instance_exists()` before reading or writing through it.
+- **`with()` reassigns what `self` means:** Inside `with (other_instance) { ... }`, `self` refers to the targeted
+  instance, not the instance that ran the `with` statement — `other` refers back to the original caller. Keep this
+  straight, especially when nesting `with()` blocks.
+- **No function calls as a `with()` assignment target:** A function call can't sit directly on the left-hand side of
+  an assignment inside a `with` block.
+  - _Bad:_ `instance_nearest(x, y, obj).speed = 0;` — this errors.
+  - _Good:_ `(instance_nearest(x, y, obj)).speed = 0;`, or assign the result to a variable first.
+
 ### Principles
 
 #### 1. The principle of Model-View-Controller (MVC) separation
+
+This project follows the MVC pattern, mapped onto GameMaker's own event structure rather than treated as an
+abstract idea:
+
+- **Model:** the game's actual state — instance variables, structs, and the data owned by the persistent controller
+  (see [Global Declarations](#2-global-declarations)). The Model doesn't know or care how it gets drawn.
+- **View:** the Draw event, exclusively. This is the existing
+  [Draw Events rule](#3-data-structures--syntax) stated in architectural terms: the View may only read the Model to
+  render it, never compute new state.
+- **Controller:** the Step event (and other logic events) — reads input, updates the Model, and decides what the
+  View will have available to render, but never draws anything itself.
+
+In practice: if you find yourself calculating a value inside a Draw event, or drawing something from inside a Step
+event, that's an MVC violation as much as it is a Draw Events violation — the two rules are the same rule, just
+named differently.
+
+#### 2. The principle of defensive programming
+
+All functions must be internally sanitised: they should robustly handle any input without causing an unhandled
+exception.
+
+#### 3. The principle of modularity
+
+All code must be written with reuse in mind, in small, discrete units.
+
+#### 4. The principle of DRY code
+
+**DRY: don't repeat yourself. WET: write everything twice.**
+
+- DRY code is clean code; WET code is messy code.
+- DRY code is fast code; WET code is slow code.
+- DRY code is readable code; WET code is confusing code.
+- DRY code is efficient code; WET code is wasteful code.
+- DRY code is professional code; WET code is sloppy code.
+- DRY code is happy code; WET code is sad code.
+
+#### 5. The principle of human-readable code
+
+Micro-optimisations should not come at the expense of clean, human-readable code.
+
+### Code sanity checks
+
+Before committing, ask:
+
+1. Are there any built-in GameMaker functions I can use to optimise this?
+2. Have I optimised for performance?
+3. Have I followed the design philosophy and coding rules?
 
 ---
 
@@ -352,7 +548,7 @@ If you have any problems with the repository or have any suggestions please cont
 
 You may also contact us via our [website](https://ninjamonkeygames.com).
 
-Any bugs should be raised as an [issue](https://github.com/NinjaMonkeyGames/gamemaker-project-template/issues) on
+Any bugs should be raised as an [issue](https://github.com/NinjaMonkeyGames/gm-grid-utility/issues) on
 GitHub — except a security vulnerability, which should go through [SECURITY.md](SECURITY.md) instead of a public
 issue.
 

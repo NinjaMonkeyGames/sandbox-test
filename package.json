@@ -1,7 +1,7 @@
 {
   "author": "NinjaMonkeyGames",
   "bugs": {
-    "url": "https://github.com/NinjaMonkeyGames/gamemaker-project-template/issues"
+    "url": "https://github.com/NinjaMonkeyGames/gm-grid-utility/issues"
   },
   "description": "gamemaker-project-ci-template",
   "devDependencies": {
@@ -9,7 +9,6 @@
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^2.1.0",
     "@gamemaker/gm-cli": "^2.4.1",
-    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/npm": "^13.1.5",
@@ -22,17 +21,15 @@
     "eslint-plugin-json-schema-validator": "^6.3.1",
     "eslint-plugin-jsonc": "^3.4.2",
     "globals": "^17.12.0",
-    "htmlhint": "^1.9.2",
     "i": "^0.3.7",
     "jsonc-eslint-parser": "^3.3.0",
     "markdownlint-cli2": "^0.23.2",
     "npm": "^11.19.1",
     "semantic-release": "^25.0.9",
     "shellcheck": "^1.1.0",
-    "stylelint-config-standard": "^40.0.0",
     "typescript-eslint": "^8.70.0"
   },
-  "homepage": "https://github.com/NinjaMonkeyGames/gamemaker-project-template#readme",
+  "homepage": "https://github.com/NinjaMonkeyGames/gm-grid-utility#readme",
   "keywords": [
     "template",
     "gamemaker",
@@ -41,10 +38,10 @@
   ],
   "license": "GPL-3.0",
   "main": "index.js",
-  "name": "gamemaker-project-template",
+  "name": "gm-grid-utility",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NinjaMonkeyGames/gamemaker-project-template.git"
+    "url": "git+https://github.com/NinjaMonkeyGames/gm-grid-utility.git"
   },
   "scripts": {
     "lint:eslint": "eslint --config .config/eslint.config.js .",

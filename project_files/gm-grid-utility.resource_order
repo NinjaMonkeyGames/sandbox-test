@@ -1,0 +1,9 @@
+{
+  "FolderOrderSettings":[],
+  "ResourceOrderSettings":[
+    {"name":"obj_grid_controller","order":2,"path":"objects/obj_grid_controller/obj_grid_controller.yy",},
+    {"name":"obj_unit_test","order":1,"path":"objects/obj_unit_test/obj_unit_test.yy",},
+    {"name":"spt_get_asset_type_as_string","order":4,"path":"scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.yy",},
+    {"name":"spr_jungle_temple","order":3,"path":"sprites/spr_jungle_temple/spr_jungle_temple.yy",},
+  ],
+}
