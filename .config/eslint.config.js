@@ -1,3 +1,4 @@
+// eslint.config.js
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -31,13 +32,13 @@ export default [
   {
     ignores: [
       '**/node_modules/',
-      '**/vendor/',
       '**/dist/',
       '**/build/',
       '**/coverage/',
       'package-lock.json',
       'branch-protection-rules/',
-      ...gitignorePatterns
+      ...gitignorePatterns,
+      '**/gm-grid-utility/**'
     ],
   },
 

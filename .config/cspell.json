@@ -9,8 +9,7 @@
     "package.json",
     ".git",
     "**.yyp",
-    "/vendor",
-    ".htmllintrc"
+    "/project_files"
   ],
   "language": "en-GB",
   "overrides": [
@@ -61,7 +60,7 @@
       ]
     },
     {
-      "filename": "grid-utility-professional/objects/obj_grid_controller/Create_0.gml",
+      "filename": "gm-grid-utility/objects/obj_grid_controller/Create_0.gml",
       "words": [
         "vformat",
         "tilemap",
@@ -119,14 +118,14 @@
       ]
     },
     {
-      "filename": "grid-utility-professional/notes/todo/todo.txt",
+      "filename": "gm-grid-utility/notes/todo/todo.txt",
       "words": [
         "globalvar"
 
       ]
     },
     {
-      "filename": "grid-utility-professional/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
+      "filename": "gm-grid-utility/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
       "words": [
         "animationcurve",
         "particlessystem"
@@ -134,14 +133,14 @@
       ]
     },
     {
-      "filename": "grid-utility-professional/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
+      "filename": "gm-grid-utility/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
       "words": [
         "particlessystem"
 
       ]
     },
     {
-      "filename": "grid-utility-professional/objects/obj_unit_test/Create_0.gml",
+      "filename": "gm-grid-utility/objects/obj_unit_test/Create_0.gml",
       "words": [
         "particlessystem"
 
@@ -156,21 +155,21 @@
       ]
     },
     {
-      "filename": "grid-utility-professional/objects/obj_unit_test/Create_0.gml",
+      "filename": "gm-grid-utility/objects/obj_unit_test/Create_0.gml",
       "words": [
         "vbuff"
 
       ]
     },
     {
-      "filename": "grid-utility-professional/rooms/rm_main/RoomCreationCode.gml",
+      "filename": "gm-grid-utility/rooms/rm_main/RoomCreationCode.gml",
       "words": [
         "tilemap"
 
       ]
     },
     {
-      "filename": "grid-utility-professional/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
+      "filename": "gm-grid-utility/scripts/spt_get_asset_type_as_string/spt_get_asset_type_as_string.gml",
       "words": [
         "particlesystem"
 
@@ -214,50 +213,19 @@
       "words": [
         "esac"
       ]
-    },
-    {
-      "filename": ".config/phpcs.xml",
-      "words": [
-        "colors"
-      ]
     }
   ],
   "version": "0.2",
   "words": [
     "Allman",
-    "bgcolor",
-    "codesniffer",
     "commitlint",
-    "dbaeumer",
-    "ERRMODE",
-    "figcaption",
-    "formulahendry",
     "freeform",
     "GAMEMAKER",
     "Gitflow",
-    "htmlhint",
-    "htmllint",
-    "htmllintrc",
-    "johnrdorazio",
     "linted",
-    "linters",
-    "longdesc",
-    "marginheight",
-    "marginwidth",
-    "maxerr",
     "monkeyknuckles",
-    "mysqli",
     "ninjamonkeygames",
-    "nonmixed",
-    "noopener",
-    "phpcs",
-    "phpmyadmin",
-    "phpvfscomposer",
     "scannable",
-    "shellcheck",
-    "shivammathur",
-    "squizlabs",
-    "tabindex",
-    "tagname"
+    "shellcheck"
   ]
 }

@@ -14,13 +14,11 @@
 // 9. Include otherwise excluded files in the project file search.
 // 10. Start Terminal in Bash.
 // 11. Automatically format JSON files on save.
-// 12. PHPCS Settings.
-// 13. Set commitlint config path.
-// 14. Markdown settings.
+// 12. Set commitlint config path.
+// 13. Markdown settings.
 
 {
-
-  // Markdown Settings
+// Markdown Settings
 
   "[markdown]":
   {
@@ -81,11 +79,6 @@
 
   "markdown.extension.toc.updateOnSave": true, // Automatically update the TOC when saving markdown files
   "markdownlint.configFile": ".config/.markdownlint-cli2.jsonc", // Set markdownlint config path
-
-  // PHPCS Settings
-
-  "phpcs.executablePath": "vendor/bin/phpcs",
-  "phpcs.standard": ".config/phpcs.xml",
 
   // Include Otherwise Excluded Files In Project File Search
 

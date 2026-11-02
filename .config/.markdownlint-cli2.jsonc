@@ -23,9 +23,9 @@
 
     "MD007": 
     {
-      "indent": 2,              // Tabs are worth two spaces.
-      "start_indent": 2,        // First indent of text.
-      "start_indented": false   // Automatically indent.
+      "indent": 2,                      // Tabs are worth two spaces.
+      "start_indent": 2,                // First indent of text.
+      "start_indented": false           // Automatically indent.
     },
 
     "MD009": 
@@ -37,9 +37,9 @@
 
     "MD010": 
     {
-      "code_blocks": true,          // Allow code blocks.
-      "ignore_code_languages": [],  // Languages to ignore.
-      "spaces_per_tab": 1           // Number of spaces per tab in code blocks    
+      "code_blocks": true,              // Allow code blocks.
+      "ignore_code_languages": [],      // Languages to ignore.
+      "spaces_per_tab": 1               // Number of spaces per tab in code blocks    
     },
 
     "MD011": true,   // Reversed link syntax
@@ -236,7 +236,6 @@
   "ignores": 
   [
     "node_modules/**",
-    "vendor/**",
     "CHANGELOG.md",
     ".git/**"
   ]
